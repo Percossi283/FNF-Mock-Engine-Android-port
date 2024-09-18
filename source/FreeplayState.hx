@@ -52,8 +52,8 @@ class FreeplayState extends MusicBeatState
 
 	override function create()
 	{
-		Paths.clearStoredMemory();
-		Paths.clearUnusedMemory();
+		//Paths.clearStoredMemory();
+		//Paths.clearUnusedMemory();
 		
 		persistentUpdate = true;
 		PlayState.isStoryMode = false;
@@ -101,7 +101,7 @@ class FreeplayState extends MusicBeatState
 			}
 		}*/
 
-		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
+		bg = new FlxSprite().loadGraphic(Paths.image('FreeplayMenu'));
 		bg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(bg);
 		bg.screenCenter();
@@ -111,17 +111,23 @@ class FreeplayState extends MusicBeatState
 
 		for (i in 0...songs.length)
 		{
-			var songText:Alphabet = new Alphabet(90, 320, songs[i].songName, true);
+			var songText:Alphabet = new Alphabet(0, (70 * i) + 30, songs[i].songName, true, false);
 			songText.isMenuItem = true;
-			songText.targetY = i - curSelected;
+			songText.targetY = i;
 			grpSongs.add(songText);
 
-			var maxWidth = 980;
-			if (songText.width > maxWidth)
+			if (songText.width > 980)
 			{
-				songText.scaleX = maxWidth / songText.width;
+				var textScale:Float = 980 / songText.width;
+				songText.scale.x = textScale;
+				for (letter in songText.lettersArray)
+				{
+					letter.x *= textScale;
+					letter.offset.x *= textScale;
+				}
+				//songText.updateHitbox();
+				//trace(songs[i].songName + ' new scale: ' + textScale);
 			}
-			songText.snapToPosition();
 
 			Paths.currentModDirectory = songs[i].folder;
 			var icon:HealthIcon = new HealthIcon(songs[i].songCharacter);
@@ -187,7 +193,7 @@ class FreeplayState extends MusicBeatState
 		add(textBG);
 
 		#if PRELOAD_ALL
-			#if mobile
+			#if android
 			var leText:String = "Press X to listen to the Song / Press C to open the Gameplay Changers Menu / Press Y to Reset your Score and Accuracy.";
 			var size:Int = 16;
 			#else
@@ -195,7 +201,7 @@ class FreeplayState extends MusicBeatState
 			var size:Int = 16;
 			#end
 		#else
-			#if mobile
+			#if android
 			var leText:String = "Press C to open the Gameplay Changers Menu / Press Y to Reset your Score and Accuracy.";
 			var size:Int = 18;
 			#else
@@ -207,11 +213,12 @@ class FreeplayState extends MusicBeatState
 		text.setFormat(Paths.font("vcr.ttf"), size, FlxColor.WHITE, RIGHT);
 		text.scrollFactor.set();
 		add(text);
-		
-		#if mobile
-		addVirtualPad(LEFT_FULL, A_B_C_X_Y);
+
+		#if android
+		addVirtualPad(LEFT_FULL, A_B_C_X_Y_Z);
+		virtualPad.y = -26;
 		#end
-		
+
 		super.create();
 	}
 
@@ -274,17 +281,17 @@ class FreeplayState extends MusicBeatState
 			ratingSplit[1] += '0';
 		}
 
-		scoreText.text = 'PERSONAL BEST: ' + lerpScore + ' (' + ratingSplit.join('.') + '%)';
+		scoreText.text = 'PERSONAL SCORE: ' + lerpScore + ' (' + ratingSplit.join('.') + '%)';
 		positionHighscore();
 
 		var upP = controls.UI_UP_P;
 		var downP = controls.UI_DOWN_P;
 		var accepted = controls.ACCEPT;
-		var space = FlxG.keys.justPressed.SPACE #if mobile || virtualPad.buttonX.justPressed #end;
-		var ctrl = FlxG.keys.justPressed.CONTROL #if mobile || virtualPad.buttonC.justPressed #end;
+		var space = FlxG.keys.justPressed.SPACE #if android || virtualPad.buttonX.justPressed #end;
+		var ctrl = FlxG.keys.justPressed.CONTROL #if android || virtualPad.buttonC.justPressed #end;
 
 		var shiftMult:Int = 1;
-		if(FlxG.keys.pressed.SHIFT) shiftMult = 3;
+		if(FlxG.keys.pressed.SHIFT #if android || virtualPad.buttonZ.pressed #end) shiftMult = 3;
 
 		if(songs.length > 1)
 		{
@@ -312,12 +319,14 @@ class FreeplayState extends MusicBeatState
 				}
 			}
 
+			#if !android
 			if(FlxG.mouse.wheel != 0)
 			{
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.2);
 				changeSelection(-shiftMult * FlxG.mouse.wheel, false);
 				changeDiff();
 			}
+			#end
 		}
 
 		if (controls.UI_LEFT_P)
@@ -338,7 +347,7 @@ class FreeplayState extends MusicBeatState
 
 		if(ctrl)
 		{
-			#if mobile
+			#if android
 			removeVirtualPad();
 			#end
 			persistentUpdate = false;
@@ -395,7 +404,7 @@ class FreeplayState extends MusicBeatState
 				colorTween.cancel();
 			}
 			
-			if (FlxG.keys.pressed.SHIFT){
+			if (FlxG.keys.pressed.SHIFT #if android || virtualPad.buttonZ.pressed #end){
 				LoadingState.loadAndSwitchState(new ChartingState());
 			}else{
 				LoadingState.loadAndSwitchState(new PlayState());
@@ -405,9 +414,9 @@ class FreeplayState extends MusicBeatState
 					
 			destroyFreeplayVocals();
 		}
-		else if(controls.RESET #if mobile || virtualPad.buttonY.justPressed #end)
+		else if(controls.RESET #if android || virtualPad.buttonY.justPressed #end)
 		{
-			#if mobile
+			#if android
 			removeVirtualPad();
 			#end
 			persistentUpdate = false;
